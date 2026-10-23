@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arandu-io/hesape/arandutest/browser"
+	"github.com/arandu-io/framework/test/browser"
 )
 
 // engine is the engine ARANDU_E2E_BROWSER names, as the conformance run

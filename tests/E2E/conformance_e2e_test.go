@@ -5,7 +5,7 @@ package e2e_test
 import (
 	"testing"
 
-	"github.com/arandu-io/hesape/arandutest/browser/conformance"
+	"github.com/arandu-io/framework/test/browser/conformance"
 
 	playwright "github.com/hyz-is/arandu-playwright"
 )

@@ -63,14 +63,15 @@ func TestTheDeclaredCapabilitiesAreWhatTheCodeDoes(t *testing.T) {
 }
 
 // TestTheCodeHasNoRouteTableOrMigration holds what the manifest's
-// migrations = false and the README promise: the driver is test tooling, and
-// an application links nothing of it into a running server.
+// migrations = false and the README promise: the driver is test tooling that
+// imports the framework's test kit and nothing an application runs.
 func TestTheCodeHasNoRouteTableOrMigration(t *testing.T) {
 	for _, f := range linkedFiles(t) {
 		for _, imp := range f.Imports {
 			path := strings.Trim(imp.Path.Value, `"`)
-			if strings.HasPrefix(path, "github.com/arandu-io/framework") || strings.HasPrefix(path, "github.com/arandu-io/hesape/data") {
-				t.Errorf("%s imports %s; the driver reaches neither the router nor the database", f.Name.Name, path)
+			kit := path == "github.com/arandu-io/framework/test" || strings.HasPrefix(path, "github.com/arandu-io/framework/test/")
+			if (strings.HasPrefix(path, "github.com/arandu-io/framework") && !kit) || strings.HasPrefix(path, "github.com/arandu-io/hesape/") {
+				t.Errorf("%s imports %s; the driver reaches the test kit and nothing of the application's runtime", f.Name.Name, path)
 			}
 		}
 	}

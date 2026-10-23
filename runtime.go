@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/arandu-io/hesape/arandutest/browser"
+	"github.com/arandu-io/framework/test/browser"
 	pw "github.com/mxschmitt/playwright-go"
 )
 
