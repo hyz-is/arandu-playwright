@@ -48,6 +48,11 @@ jobs:
       - name: test
         run: go test -race ./...
 
+      # The browser tests carry the e2e tag, so the gates above never compile
+      # them; vet does here, and the conformance job below runs them.
+      - name: vet the e2e tests
+        run: go vet -tags e2e ./...
+
       # A v0 release may break, but every break must tell an installer exactly
       # what to replace. Module mode also sees a deleted package or type that a
       # loop over the current package list would miss.
@@ -113,11 +118,55 @@ jobs:
       # Required by doc 24: a known vulnerability blocks the merge rather than
       # showing up in a report nobody reads.
       #
-      # It is outside the template markers on purpose, so it survives configure:
-      # a package cloned from here inherits the check, which is the whole reason
-      # a playwright carries CI at all.
+      # It is outside the template markers on purpose, so it survived configure:
+      # every package cloned from the template inherits the check.
       - name: govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
 
+
+  # The driver's proof: the test kit's conformance suite, and the lifecycle
+  # tests beside the code, in each engine. The driver and the browsers are
+  # installed into the user's cache, which is cached between runs; the
+  # system libraries the browsers need are not, so --with-deps runs every
+  # time. CI=true makes a missing browser fail the run instead of skipping it.
+  conformance:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    env:
+      GOWORK: "off"
+      ARANDU_E2E_BROWSER: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+
+      - name: browser cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/ms-playwright-go
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('go.sum') }}
+
+      - name: install the driver and ${{ matrix.browser }}
+        run: go run ./install-browsers --with-deps ${{ matrix.browser }}
+
+      - name: conformance in ${{ matrix.browser }}
+        env:
+          ARANDU_E2E_TRACE_DIR: ${{ runner.temp }}/arandu-e2e
+        run: go test -tags e2e -count=1 -v ./...
+
+      - name: keep the trace of a failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: trace-${{ matrix.browser }}
+          path: ${{ runner.temp }}/arandu-e2e
+          if-no-files-found: ignore
