@@ -18,46 +18,23 @@ The two filters on `gofmt` are not preference. `gofmt` is the only tool in the
 chain that ignores build tags, so it reads files the compiler deliberately
 excludes; `testdata/` holds fixtures that are invalid on purpose.
 
-A change to the entity in `model.go` is followed by `aru model:build`, which
-rewrites `PlaywrightQuery.go`, and the regenerated file goes in the same commit.
-`aru model:build --check` exits 1 when the committed file is missing, stale or
-edited by hand.
+A change to the driver also passes the conformance suite in the three
+engines, which needs the driver and the browsers in the user's cache:
+
+```bash
+go run ./install-browsers
+for b in chromium firefox webkit; do ARANDU_E2E_BROWSER=$b go test -tags e2e -count=1 ./...; done
+```
 
 ## What a change has to keep true
 
-Four properties are the reason this package is what it is. A change that breaks
-one of them will not be merged, whatever else it improves.
-
-1. **The policy denies by default.** No branch allows every action, and none is
-   added. Opening an action means writing the rule that opens it.
-2. **Every Service method authorizes before reaching the Model.** The Grant is
-   then required by the Model terminal; constructing `Playwrights(db)` first is
-   already the wrong order and the structural audit rejects it.
-3. **The tenant comes from `data.Tenant(g)`.** Not from the path, the body, the
-   query string or a header, on any code path, including the read paths.
-4. **`arandu.mod.toml` matches the code.** Adding an outbound call, a file
-   write or a process means declaring it there in the same commit.
-
-CRUD stays on `Playwrights(db)` and its generated query. Add a Repository only for
-a specialized complex query, read model, report, export or raw SQL contract; a
-wrapper around `Find`, `Get`, `Save` or `Delete` is a second data path.
-
-Every query starts at `Playwrights(s.db)`. The constructor returns one mutable
-query, so a second chain begun from a value held in a variable carries the
-clauses of the first -- and that compiles.
-
-Model-backed entities stay pointers. A copy of `Playwright` keeps the model of the
-row it was copied from, and the model refuses to write through the copy with
-`model.ErrUnwired`. Response resources are the deliberate snapshot boundary;
-Service results are not.
-
-The rules of the entity itself go in the custom block of `model.go`, as pure
-methods. The Service orchestrates, and holds no rule the entity could hold.
-
-Handlers read who is asking with `ctx.User()`, which `RequireAuth` filled, and
-return the error the Service returned for the router to answer. A handler that
-loads the session or maps an error to a status fails
-`TestHandlersLeaveTheSubjectAndTheStatusToTheFramework`.
+1. **The contract, and nothing beyond it.** A capability `browser.Driver` does
+   not have is proposed to the test kit, not added here.
+2. **Every engine answers alike**, in the kit's vocabulary, with the browser's
+   own words kept beside it.
+3. **`Launch` downloads nothing.** Only `Install` does.
+4. **`arandu.mod.toml` matches the code**, including what playwright-go does on
+   this package's behalf.
 
 ## Style
 
