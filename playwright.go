@@ -150,12 +150,21 @@ func (d *Driver) Navigate(ctx context.Context, url string) error {
 	return nil
 }
 
-// awaitErrorDocument waits, briefly, for the error document Chromium commits
-// after a refused navigation. An evaluation sent before it settles would land
-// in the document it replaces. Firefox and WebKit commit none under
-// Playwright.
+// errorDocument is how each engine's error document reads to a script:
+// Chromium's sits at chrome-error://, Firefox's keeps the failed URL in
+// location and says about:neterror in documentURI, and never completes.
+// WebKit commits none under Playwright.
+var errorDocument = map[string]string{
+	"chromium": `location.href.startsWith('chrome-error:') && document.readyState === 'complete'`,
+	"firefox":  `/^about:(net|cert)error/.test(document.documentURI)`,
+}
+
+// awaitErrorDocument waits, briefly, for the error document the browser
+// commits after a refused navigation. An evaluation sent before it is in
+// place would land in the document it replaces.
 func (d *Driver) awaitErrorDocument(ctx context.Context) {
-	if d.engine != "chromium" {
+	check, ok := errorDocument[d.engine]
+	if !ok {
 		return
 	}
 	wait, cancel := context.WithTimeout(ctx, 2*time.Second)
@@ -163,12 +172,8 @@ func (d *Driver) awaitErrorDocument(ctx context.Context) {
 	tick := time.NewTicker(20 * time.Millisecond)
 	defer tick.Stop()
 	for {
-		var at struct {
-			URL   string `json:"url"`
-			Ready string `json:"ready"`
-		}
-		if d.Evaluate(wait, `({url: location.href, ready: document.readyState})`, &at) == nil &&
-			strings.HasPrefix(at.URL, "chrome-error:") && at.Ready == "complete" {
+		var there bool
+		if d.Evaluate(wait, check, &there) == nil && there {
 			return
 		}
 		select {
