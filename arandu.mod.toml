@@ -9,7 +9,7 @@
 # under the e2e build tag, and links none of it into the server it deploys.
 
 name = "hyz-is/playwright"
-framework = ">= 0.63"
+framework = ">= 0.66"
 profiles = ["conventional", "performance"]
 
 [permissions]
